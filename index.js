@@ -174,20 +174,44 @@ TelldusAccessory.prototype = {
 
         that.log("Executing command " + characteristic + " : " + newValue);
 
+        var telldusDevice = TelldusDeviceToHomeKitDeviceMap(that.model);
+        
+        function turnOnOffDevice(device, newValue, callback) {
+            TelldusLive.onOffDevice(that.device, newValue, function (err, result) {
+                if (!!err) callback(err, null);
+                callback(null, newValue);
+            });
+        }
+
+        function inArray(array, object) {
+            for (var i = 0; i < array.length; i++) {
+                if(array[i] === object) 
+                    return true;
+            }
+            return false;
+        }
 
         switch (characteristic) {
             case Characteristic.Formats.BOOL:
-                TelldusLive.onOffDevice(that.device, newValue, function (err, result) {
-                    if (!!err) callback(err, null);
-                    callback(null, newValue);
-                });
+                turnOnOffDevice(that.device, newValue, callback);
                 break;
 
             case Characteristic.Formats.INT:
-                TelldusLive.dimDevice(that.device, that.percentageToBits(newValue), function (err, result) {
-                    if (!!err) callback(err, null);
+                if (newValue === 1 &&
+                    inArray(telldusDevice.characteristics, Characteristic.On) &&
+                    inArray(telldusDevice.characteristics, Characteristic.Brightness)) {
+                    // Will not dim selflearning-dimmers to 1
+                    // since it will prevent next dim-command to function properly
                     callback(null, that.bitsToPercentage(newValue));
-                });
+                } else if (typeof(newValue) === "boolean") {
+                    // Sometimes boolean values will be given as an "INT" value
+                    turnOnOffDevice(that.device, newValue, callback);
+                } else {
+                    TelldusLive.dimDevice(that.device, that.percentageToBits(newValue), function (err, result) {
+                    if (!!err) callback(err, null);
+                        callback(null, that.bitsToPercentage(newValue));
+                    });
+                }
                 break;
         }
     },
