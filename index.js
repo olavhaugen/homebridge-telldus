@@ -240,11 +240,6 @@ TelldusAccessory.prototype = {
             that.getState(characteristic.props.format, function() {});
 
             characteristic
-                .on('get', function (callback, context) {
-                    that.getState(characteristic.props.format, callback);
-                });
-
-            characteristic
                 .on('set', function (newValue, callback, context) {
                     that.executeCommand(characteristic.props.format, newValue, callback);
                 });
